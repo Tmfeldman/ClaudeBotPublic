@@ -1,9 +1,14 @@
+require('dotenv').config(); //initialize dotenv
 const {Client, Intents} = require('discord.js');
+const fs = require('fs');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
 client.once('ready', () => {
 	console.log("Claude bot loaded");
 });
+var loc = process.cwd();
+var spyMap = JSON.parse(fs.readFileSync(loc + "/spyMap.json", 'utf8'))
+console.log("Spy map: ", spyMap);
 
 quotes = [
 
@@ -32,14 +37,55 @@ quotes = [
 
 
 client.on('messageCreate', message => {
-  if (message.content.toLowerCase().includes("claude") && message.author.username != "ClaudeBot") { 
-    console.log("Got message: ", message.content, " from: ", message.author.username, "At time: ", message.createdAt);
+	if (message.content.toLowerCase().includes("claude") && message.author.username != "ClaudeBot") { 
+    		console.log("Got message: ", message.content, " from: ", message.author.username, "At time: ", message.createdAt);
 		message.channel.send(quotes[Math.floor(Math.random() * quotes.length)]);
 	}
+	try {
+		if (message.guild.id in spyMap && message.channel.id in spyMap[message.guild.id]) {
+			logMessage(message);
+		}
+	} catch (err){
+		console.log(err);
+	}		
 });
 
 
 client.login("OTExODYyNDQ3MTA1Nzk4MTc1.YZnkFA.2YzIwRxi89nNepomfYY6EW3-c0I");
 
+fs.watchFile(loc + "/spyMap.json", function (event, filename) {
+	console.log("spyMap.json has been edited. Reloading");
+	spyMap = JSON.parse(fs.readFileSync(loc + "/spyMap.json", 'utf8'));
+	console.log("Updated spy map: ", spyMap);
 
+});
+
+function logMessage (message) {
+	var time = new Date(message.createdTimestamp);
+		  
+	var channelName = message.channel.name.replace(/[/\\?%*:|"'<> ]/g, '-');
+	channelName = channelName.replace(/[^\x00-\x7F]/g, "");
+  
+	var logDir = loc + "/log/" 
+	+ message.guild.name.replace(/[/\\?%*:|"'<> ]/g, '-') + "/"
+	+ channelName;
+	
+	var logPath = logDir + "/"
+	+ (time.getMonth()+1) + "-"
+	+ time.getDate() + "-"
+	+ (time.getYear()-100) + ".log"
+   
+  
+	fs.mkdir(logDir, { recursive: true }, (err) => {
+		if (err) throw err;
+	});
+  
+	fs.appendFile(logPath, time.toTimeString() + " - " + message.author.username + ": " +message.content + '\n', err => {
+		if (err) {
+			console.error(err)
+			return
+		}
+		//done!
+	});
+}
 
