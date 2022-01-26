@@ -40,5 +40,5 @@ client.on('messageCreate', message => {
 });
 
 
-client.login(System.env.CLIENT_TOKEN);
+client.login(process.env.CLIENT_TOKEN);
 
